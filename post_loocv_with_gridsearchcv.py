@@ -20,7 +20,7 @@ grid_search.fit(X, y)
 
 print(grid_search.cv_results_)
 
-# Part 2
+# Part 1. Section 2
 
 def print_params_scores(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
     y_preds = []
@@ -43,7 +43,7 @@ print_params_scores(grid_search, y, scorer_fun = f1_score)
 print(f'Accuracies:')
 print_params_scores(grid_search, y, scorer_fun = accuracy_score)
 
-# Part 3
+# Part 1. Section 3
 
 def find_best_params(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
     y_preds = []
@@ -69,7 +69,41 @@ def find_best_params(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
 best_score, best_params = find_best_params(grid_search, y, scorer_fun = f1_score)
 print(f'Best F1-score was {best_score} with the following parameters: {best_params}')
 
-# Part 4
+# Part 1. Section 4 (Updated for Part 2 post)
+# Part 2. Section 1
 
-new_best_model = DecisionTreeClassifier(random_state=random_state, **best_params)
+from leave_one_out_gridsearchcv import recreate_model_with_best_params
+
+model = DecisionTreeClassifier(random_state=random_state, max_depth=5)
+
+new_best_model = recreate_model_with_best_params(model, best_params)
 print(new_best_model)
+
+# Part 2. Section 2
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+from leave_one_out_gridsearchcv import leave_one_out_grid_search_cv, recreate_pipeline_with_best_params
+
+X, y = make_classification(n_samples=100, random_state=1, n_classes = 2, n_informative=3, n_features=12)
+
+logistic = LogisticRegression(max_iter=10000, tol=0.1)
+scaler = StandardScaler(with_std=False)
+
+param_grid = {
+    "logistic__C": np.logspace(-4, 4, 4),
+    "scaler__with_mean": [True, False]
+}
+
+pipe = Pipeline(steps=[("scaler", scaler), ("logistic", logistic)])
+
+loo_grid_search_cv = leave_one_out_grid_search_cv(X, y, pipe, param_grid)
+
+best_score, best_params = find_best_params(loo_grid_search_cv, y, scorer_fun = f1_score)
+
+print(f'Pipeline best F1-score was {best_score} with the following parameters: {best_params}')
+
+best_pipeline = recreate_pipeline_with_best_params(pipe, best_params, verbose=True)
+print(best_pipeline)
