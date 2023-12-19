@@ -11,6 +11,25 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 
 def leave_one_out_grid_search_cv(X, y, model, param_grid):
+    """
+    Perform Leave-One-Out cross-validated grid search for hyperparameter tuning.
+
+    :param X: The feature matrix.
+    :type X: array-like or pd.DataFrame
+
+    :param y: The target variable.
+    :type y: array-like or pd.Series
+
+    :param model: The machine learning model for which hyperparameter tuning is performed.
+    :type model: Any
+
+    :param param_grid: The parameter grid to search over.
+    :type param_grid: dict
+
+    :return: A scikit-learn GridSearchCV object configured for Leave-One-Out
+        cross-validation and hyperparameter tuning.
+    :rtype: sklearn.model_selection.GridSearchCV
+    """
     def get_pred(y_true, y_predicted):
         return y_predicted
 
@@ -21,6 +40,26 @@ def leave_one_out_grid_search_cv(X, y, model, param_grid):
     return grid_search
 
 def print_params_scores(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
+    """
+    Print the scores of each parameter set obtained during cross-validation.
+
+    :param grid_search: The scikit-learn GridSearchCV object.
+    :type grid_search: sklearn.model_selection.GridSearchCV
+
+    :param y_true: The true target variable values.
+    :type y_true: array-like
+
+    :param scorer_fun: The scoring function to evaluate predictions. It should take
+        `y_true` and `y_pred` as input.
+    :type scorer_fun: callable
+
+    :param scorer_fun_args: Additional arguments to be passed to the `scorer_fun`.
+    :type scorer_fun_args: dict, optional
+    :default scorer_fun_args: {}
+
+    :returns: None
+    :rtype: None
+    """
     y_preds = []
     results = grid_search.cv_results_
     params = results['params']
@@ -36,6 +75,26 @@ def print_params_scores(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
         print(f'{params[j]} obtained {scorer_fun.__name__} of {score}')
 
 def find_best_params(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
+    """
+    Find the best parameters based on cross-validated scores.
+
+    :param grid_search: The scikit-learn GridSearchCV object.
+    :type grid_search: sklearn.model_selection.GridSearchCV
+
+    :param y_true: The true target variable values.
+    :type y_true: array-like
+
+    :param scorer_fun: The scoring function to evaluate predictions. It should take
+        `y_true` and `y_pred` as input.
+    :type scorer_fun: callable
+
+    :param scorer_fun_args: Additional arguments to be passed to the `scorer_fun`.
+    :type scorer_fun_args: dict, optional
+    :default scorer_fun_args: {}
+
+    :returns: A tuple containing the best score and corresponding best parameters.
+    :rtype: tuple
+    """
     y_preds = []
     results = grid_search.cv_results_
     params = results['params']
@@ -56,6 +115,20 @@ def find_best_params(grid_search, y_true, scorer_fun, scorer_fun_args = {}):
     return best_score, best_params
 
 def merge_params_dict(best_params_dict, model_params_dict):
+    """
+    Merge two dictionaries of parameters.
+
+    :param best_params_dict: The dictionary containing the best parameters.
+    :type best_params_dict: dict
+
+    :param model_params_dict: The dictionary containing additional parameters.
+    :type model_params_dict: dict
+
+    :returns: A new dictionary containing a merged set of parameters. If a parameter
+        exists in best_params_dict, it is retained; otherwise, it is taken from
+        model_params_dict.
+    :rtype: dict
+    """
     toret = best_params_dict.copy()
     for key in model_params_dict.keys():
         if not toret.get(key):
@@ -64,9 +137,37 @@ def merge_params_dict(best_params_dict, model_params_dict):
     return toret
 
 def recreate_model_with_best_params(original_model, best_params_dict):
+    """
+    Recreate a model instance with the best parameters.
+
+    :param original_model: The original model instance to be recreated. It is expected to have a 'get_params' method.
+    :type original_model: Any
+
+    :param best_params_dict: The dictionary containing the best parameters.
+    :type best_params_dict: dict
+
+    :returns: A new instance of the original model with parameters updated based on the best_params_dict.
+    :rtype: Any
+    """
     return type(original_model)(**merge_params_dict(best_params_dict, original_model.get_params()))
 
 def recreate_pipeline_with_best_params(original_pipeline, best_params_dict, verbose=False):
+    """
+    Recreate a pipeline with the best parameters for each step.
+
+    :param original_pipeline: The original scikit-learn pipeline to be recreated.
+    :type original_pipeline: sklearn.pipeline.Pipeline
+
+    :param best_params_dict: The dictionary containing the best parameters.
+    :type best_params_dict: dict
+
+    :param verbose: If True, print information about each recreated step. Default is False.
+    :type verbose: bool, optional
+
+    :return: A new instance of the pipeline with parameters updated based on the
+        best_params_dict for each step.
+    :rtype: sklearn.pipeline.Pipeline
+    """
     best_steps = []
     for step in original_pipeline.steps:
         filtered_dict = {key.replace(f'{step[0]}__', ''): value for key, value in best_params_dict.items() if key.startswith(f'{step[0]}__')}
